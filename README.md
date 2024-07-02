@@ -4,27 +4,13 @@ A simple DNS implemented by C language.
 
 #### Compile
 
-- `Client` :
-
-	```shell
-	make client
-	```
-
 - `Relay` :
 
-	```shell
-	make relay
-	```
-
-- `Server` :
-
-	```shell
-	make server
-	```
-
+  ```shell
+  make
+  ```
 - Restart :
 
-	```shell
-	make clean
-	```
-
+  ```shell
+  make clean
+  ```

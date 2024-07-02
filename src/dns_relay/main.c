@@ -1,53 +1,71 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <arpa/inet.h>
 #include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
 
-#include "../common/utils.h"
+#define BUFFER_SIZE 512
+#define DNS_SERVER_IP "26.26.26.53"
+#define DNS_SERVER_PORT 53
+#define LOCAL_PORT 53
 
-int main() {
+void die(const char *message) {
+    perror(message);
+    exit(EXIT_FAILURE);
+}
+
+int main(int argc, char* argv[]) {
     int sockfd;
-    struct sockaddr_in server_addr, client_addr;
-    socklen_t addr_len = sizeof(client_addr);
-    struct Request packet;
-    
+    struct sockaddr_in local_addr, remote_addr, client_addr;
+    socklen_t addr_len = sizeof(struct sockaddr_in);
+    char buffer[BUFFER_SIZE];
+    ssize_t received_size;
+
+    // UDP 套接字
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-        perror("socket creation failed");
-        exit(EXIT_FAILURE);
+        die("socket creation failed");
     }
-    
-    memset(&server_addr, 0, sizeof(server_addr));
-    memset(&client_addr, 0, sizeof(client_addr));
-    
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_addr.s_addr = INADDR_ANY;
-    server_addr.sin_port = htons(8080);
-    
-    // 绑定套接字到地址
-    if (bind(sockfd, (const struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
-        perror("bind failed");
-        close(sockfd);
-        exit(EXIT_FAILURE);
+
+    memset(&local_addr, 0, sizeof(local_addr));
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+    local_addr.sin_port = htons(LOCAL_PORT);
+
+    if (bind(sockfd, (struct sockaddr *)&local_addr, sizeof(local_addr)) < 0) {
+        die("bind failed");
     }
+
     for ( ;; ) {
-        // 接收数据
-        int n = recvfrom(sockfd, &packet, sizeof(packet), MSG_WAITALL, (struct sockaddr *)&client_addr, &addr_len);
-        if (n < 0) {
-            perror("recvfrom failed");
-            close(sockfd);
-            exit(EXIT_FAILURE);
+        // 接收客户端请求
+        received_size = recvfrom(sockfd, buffer, sizeof(buffer), 0, (struct sockaddr *)&client_addr, &addr_len);
+        if (received_size < 0) {
+            die("recvfrom failed");
         }
-        
-        printf("Received packet: ID=%d, Domain=%s\n", packet.id, packet.dn);
-        pid_t pid = fork();
-        if (pid == 0) {
-            execlp("nslookup", "nslookup", packet.dn, "8.8.8.8", NULL);
-            perror("execlp");
-            exit(EXIT_FAILURE);
+
+        // 转发请求到远程 DNS 服务器
+        memset(&remote_addr, 0, sizeof(remote_addr));
+        remote_addr.sin_family = AF_INET;
+        remote_addr.sin_addr.s_addr = inet_addr(DNS_SERVER_IP);
+        remote_addr.sin_port = htons(DNS_SERVER_PORT);
+
+        if (sendto(sockfd, buffer, received_size, 0, (struct sockaddr *)&remote_addr, sizeof(remote_addr)) < 0) {
+            // TODO
+            die("sendto failed");
+        }
+
+        // 接收 DNS 服务器的响应
+        received_size = recvfrom(sockfd, buffer, sizeof(buffer), 0, NULL, NULL);
+        if (received_size < 0) {
+            die("recvfrom failed");
+        }
+
+        // 将响应发送回客户端
+        if (sendto(sockfd, buffer, received_size, 0, (struct sockaddr *)&client_addr, addr_len) < 0) {
+            die("sendto failed");
         }
     }
-    
-    // close(sockfd);
+
+    close(sockfd);
     return 0;
 }
