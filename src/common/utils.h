@@ -1,12 +1,6 @@
-#ifndef UTILS_H
+#if !defined(UTILS_H)
 #define UTILS_H
 
-#define DOMAIN_MAXLEN 128
-struct Request {
-    int id;
-    int opcode;
-    int rcode;
-    char dn[DOMAIN_MAXLEN];
-};
+void error_handling(char *message);
 
-#endif // !UTILS_H
+#endif
