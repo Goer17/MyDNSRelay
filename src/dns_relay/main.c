@@ -53,6 +53,7 @@ int main() {
         printf("Received one package from %s\n", inet_ntoa(client_addr.sin_addr));
         
         struct Message message;
+        memset(&message, 0, sizeof(message));
         if (!decode_msg(&message, buf, num_bytes)) {
             error_handling("Decoding\n");
         }

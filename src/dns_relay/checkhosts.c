@@ -25,44 +25,35 @@ void load_map() {
     close(fd);
 }
 
-int check_hosts(struct Message* message) {
+int look_in_table(struct Message* message, struct Question* q, struct ResourceRecord* rp) {
     for (int i = 0; i < dn_cnt; i++) {
-        if (strcmp(message->questions->qName, dn[i]) == 0) {
-            message->qr = 1;
-            message->aa = 1;
-            message->ra = 1;
-            message->anCount = 0;
-            message->nsCount = 0;
-            message->arCount = 0;
-            
-            if (strcmp(ip[i], "0.0.0.0") == 0) {
+        if (strcmp(q->qName, dn[i]) == 0) {
+            if (strcmp(dn[i], "0.0.0.0")) {
                 message->rcode = NameError_ResponseCode;
-                printf("Invalid Domain!\n");
-                return 0; // Stop
+                printf("Invalid Domain: %s\n", dn[i]);
             }
             else {
-                struct Question* p = message->questions;
-                struct ResourceRecord* res = malloc(sizeof(struct ResourceRecord));
-                struct ResourceRecord* rp = res;
-                while (p) {
-                    memset(res, 0, sizeof(res));
-                    strcpy(rp->name, p->qName);
-                    rp->type = p->qType;
-                    rp->cls = p->qClass;
-                    rp->ttl = 60 * 60;
-
-                    rp->rd_length = 4;
-
-                    // TODO
-                    rp->next = malloc(sizeof(struct ResourceRecord));
-                    rp = rp->next;
-                    
-                    p = p->next;
-                }
-                printf("Found in local DB.\n");
-                return 0; // Stop
+                message->anCount++;
+                message->nsCount++;
             }
         }
+    }
+}
+
+int check_hosts(struct Message* message) {
+    message->qr = 1;
+    message->aa = 1;
+    message->ra = 1;
+    message->anCount = 0;
+    message->nsCount = 0;
+    message->arCount = 0;
+    struct Question* q = message->questions;
+    struct ResourceRecord* res = NULL;
+    struct ResourceRecord* rp = malloc(sizeof(struct ResourceRecord));
+    while (q) {
+        if (look_in_table(message, q, rp) || look_in_cache(message, q, rp)) return 0;
+        q = q->next;
+        
     }
 
     return 1; // Continue -> DNS Relay
