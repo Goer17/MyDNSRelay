@@ -70,6 +70,7 @@ int main() {
             continue;
         }
 
+
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&dns_addr, sizeof(dns_addr)) == -1) {
             error_handling("sendto() error");
         }

@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "util.h"
+#include "utils.h"
 
 void error_handling(char *message) {
     perror(message);

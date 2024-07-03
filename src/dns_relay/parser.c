@@ -9,7 +9,7 @@ void print_resource_record(struct ResourceRecord *rr) {
         printf("  ResourceRecord { name '%s', type %u, class %u, ttl %u, rd_length %u, ",
                rr->name,
                rr->type,
-               rr->class,
+               rr->cls,
                rr->ttl,
                rr->rd_length);
 
@@ -213,7 +213,7 @@ int encode_resource_records(struct ResourceRecord *rr, uint8_t **buffer) {
         // Answer questions by attaching resource sections.
         encode_domain_name(buffer, rr->name);
         put16bits(buffer, rr->type);
-        put16bits(buffer, rr->class);
+        put16bits(buffer, rr->cls);
         put32bits(buffer, rr->ttl);
         put16bits(buffer, rr->rd_length);
 

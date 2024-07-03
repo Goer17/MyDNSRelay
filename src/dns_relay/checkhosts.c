@@ -2,6 +2,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 #include "checkhosts.h"
 #include "../common/utils.h"
@@ -40,8 +41,24 @@ int check_hosts(struct Message* message) {
                 return 0; // Stop
             }
             else {
-                message->rcode = Ok_ResponseType;
-                strcpy(message->questions->qName, ip[i]);
+                struct Question* p = message->questions;
+                struct ResourceRecord* res = malloc(sizeof(struct ResourceRecord));
+                struct ResourceRecord* rp = res;
+                while (p) {
+                    memset(res, 0, sizeof(res));
+                    strcpy(rp->name, p->qName);
+                    rp->type = p->qType;
+                    rp->cls = p->qClass;
+                    rp->ttl = 60 * 60;
+
+                    rp->rd_length = 4;
+
+                    // TODO
+                    rp->next = malloc(sizeof(struct ResourceRecord));
+                    rp = rp->next;
+                    
+                    p = p->next;
+                }
                 printf("Found in local DB.\n");
                 return 0; // Stop
             }

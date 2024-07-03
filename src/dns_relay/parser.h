@@ -92,7 +92,7 @@ union ResourceData {
 struct ResourceRecord {
   char *name;
   uint16_t type;
-  uint16_t class;
+  uint16_t cls;
   uint32_t ttl;
   uint16_t rd_length;
   union ResourceData rd_data;
