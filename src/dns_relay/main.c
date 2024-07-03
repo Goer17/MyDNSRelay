@@ -59,11 +59,12 @@ int main() {
         // print_message(&message);
         if (!check_hosts(&message)) {
             // Stop
-            memset(buf, 0, sizeof(buf));
-            if(!encode_msg(&message, buf)) {
+            uint8_t* buf_p = (uint8_t *)buf;
+            if(!encode_msg(&message, &buf_p)) {
                 error_handling("Encoding");
             }
-            if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
+            int buf_len = buf_p - (uint8_t*)buf;
+            if (sendto(relay_sock, buf, buf_len, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
                 error_handling("sendto() error");
             }
             continue;

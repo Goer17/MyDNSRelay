@@ -27,12 +27,20 @@ void load_map() {
 int check_hosts(struct Message* message) {
     for (int i = 0; i < dn_cnt; i++) {
         if (strcmp(message->questions->qName, dn[i]) == 0) {
+            message->qr = 1;
+            message->aa = 1;
+            message->ra = 1;
+            message->anCount = 0;
+            message->nsCount = 0;
+            message->arCount = 0;
+            
             if (strcmp(ip[i], "0.0.0.0") == 0) {
                 message->rcode = NameError_ResponseCode;
                 printf("Invalid Domain!\n");
                 return 0; // Stop
             }
             else {
+                message->rcode = Ok_ResponseType;
                 strcpy(message->questions->qName, ip[i]);
                 printf("Found in local DB.\n");
                 return 0; // Stop
