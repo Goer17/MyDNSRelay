@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <stdlib.h>
 #include "cache.h"
 
@@ -6,13 +7,19 @@ void init_cache() {
     cache_cnt = 0;
 }
 
-void record_dn(char url[], uint8_t ip_addr[4]) {
-    insert(cache_node, url, ip_addr);
+void record_dn(char url[], char* buf, size_t buf_len) {
+    insert(cache_node, url, buf, buf_len);
     cache_cnt++;
+    printf("Adding a new record: %s\n", url);
 }
 
 struct TIP* get_ip_from_cache(char url[]) {
-    return get_ip(cache_node, url);
+    struct Trie* p = search_prefix(cache_node, url);
+    if (p && p->is_end) {
+        return p->tip;
+    }
+
+    return NULL;
 }
 
 void clear_cache() {

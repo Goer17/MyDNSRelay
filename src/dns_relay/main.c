@@ -64,19 +64,30 @@ int main(int argc, char *argv[]) {
         if (!decode_msg(&message, buf, num_bytes)) {
             error_handling("Decoding");
         }
-
-        // print_message(&message);
+        char msg_dn[128];
+        strcpy(msg_dn, message.questions->qName); 
+        print_message(&message);
         // printf("0\n");
-        printf("num_bytes: %d\n", num_bytes);
-        if (!check_hosts(&message)) {
-            // Stop
+        // printf("num_bytes: %d\n", num_bytes);
+        int flag_c = check_hosts(&message);
+        if (flag_c == 0) {
             uint8_t* buf_p = (uint8_t *)buf;
-            // printf("1\n");
             if(!encode_msg(&message, &buf_p)) {
                 error_handling("Encoding");
             }
             int buf_len = buf_p - (uint8_t*)buf;
-            // printf("2\n");
+            if (sendto(relay_sock, buf, buf_len, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
+                error_handling("sendto() error");
+            }
+            continue;
+        }
+
+        if (flag_c == 2) {
+            printf("Found in cache.\n");
+            struct TIP* tip = get_ip_from_cache(message.questions->qName);
+            strcpy(buf, tip->buf);
+            int buf_len = tip->buf_len;
+            // TODO 更改 buf ID
             if (sendto(relay_sock, buf, buf_len, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
                 error_handling("sendto() error");
             }
@@ -91,17 +102,8 @@ int main(int argc, char *argv[]) {
         if (num_bytes == -1) {
             error_handling("recvfrom() error");
         }
-
-        memset(&message, 0, sizeof(message));
-        if (!decode_msg(&message, buf, num_bytes)) {
-            error_handling("Decoding");
-        }
         print_message(&message);
-        // struct ResourceRecord* as = message.answers;
-        // while (as) {
-        //     for (int i = 0; i < 4; i++) printf("%hhu%c", as->rd_data.a_record.addr[i], ".\n"[i == 3]);
-        //     as = as->next;
-        // }
+        record_dn(msg_dn, buf, num_bytes);
 
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
             error_handling("sendto() error");

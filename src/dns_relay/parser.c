@@ -260,12 +260,67 @@ int decode_msg(struct Message *msg, const uint8_t *buffer, size_t size) {
 int decode_resource_records(struct ResourceRecord *rr, const uint8_t **buffer, const uint8_t *oriBuffer) {
     // print_hex(*buffer, 50);
     rr->name = decode_domain_name(buffer, *buffer - oriBuffer);
+
     rr->type = get16bits(buffer);
     rr->cls = get16bits(buffer);
     rr->ttl = get32bits(buffer);
     rr->rd_length = get16bits(buffer);
-    for (int i = 0; i < 4; ++i)
-        rr->rd_data.a_record.addr[i] = get8bits(buffer);
+    switch (rr->type)
+    {
+    case A_Resource_RecordType:
+        for (int i = 0; i < 4; ++i)
+            rr->rd_data.a_record.addr[i] = get8bits(buffer);
+        break;
+    case AAAA_Resource_RecordType:
+        for (int i = 0; i < 16; ++i)
+            rr->rd_data.aaaa_record.addr[i] = get8bits(buffer);
+        break;
+    case TXT_Resource_RecordType:
+    {
+        rr->rd_data.txt_record.txt_data_len = get8bits(buffer);
+        uint8_t txt_len = rr->rd_data.txt_record.txt_data_len;
+        char txtData[txt_len + 1];
+        for (int i = 0; i < txt_len; ++i)
+        {
+            printf("%d ", i);
+            txtData[i] = get8bits(buffer);
+        }
+        txtData[txt_len] = '\0';
+        rr->rd_data.txt_record.txt_data = strdup(txtData);
+        break;
+    }
+    case CNAME_Resource_RecordType:
+        rr->rd_data.cname_record.name = decode_domain_name(buffer, *buffer - oriBuffer);
+        break;
+    case PTR_Resource_RecordType:
+        rr->rd_data.ptr_record.name = decode_domain_name(buffer, *buffer - oriBuffer);
+        break;
+    case SOA_Resource_RecordType:
+        rr->rd_data.soa_record.MName = decode_domain_name(buffer, *buffer - oriBuffer);
+        rr->rd_data.soa_record.RName = decode_domain_name(buffer, *buffer - oriBuffer);
+        rr->rd_data.soa_record.serial = get32bits(buffer);
+        rr->rd_data.soa_record.refresh = get32bits(buffer);
+        rr->rd_data.soa_record.retry = get32bits(buffer);
+        rr->rd_data.soa_record.expire = get32bits(buffer);
+        rr->rd_data.soa_record.minimum = get32bits(buffer);
+        break;
+    case MX_Resource_RecordType:
+        rr->rd_data.mx_record.preference = get16bits(buffer);
+        rr->rd_data.mx_record.exchange = decode_domain_name(buffer, *buffer - oriBuffer);
+        break;
+    case NS_Resource_RecordType:
+        rr->rd_data.name_server_record.name = decode_domain_name(buffer, *buffer - oriBuffer);
+        break;
+    case SRV_Resource_RecordType:
+        rr->rd_data.srv_record.priority = get16bits(buffer);
+        rr->rd_data.srv_record.weight = get16bits(buffer);
+        rr->rd_data.srv_record.port = get16bits(buffer);
+        rr->rd_data.srv_record.target = decode_domain_name(buffer, *buffer - oriBuffer);
+        break;
+    default:
+        fprintf(stderr, "ERROR @decode_resource_records: Unknown type %u. => Ignore resource record.\n", rr->type);
+        return -1;
+    }
     return 0;
 }
 

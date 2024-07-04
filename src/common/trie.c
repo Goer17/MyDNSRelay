@@ -25,7 +25,7 @@ struct Trie* search_prefix(struct Trie* p, char prefix[]) {
     return p;
 }
 
-void insert(struct Trie* p, char url[], uint8_t ip_addr[4]) {
+void insert(struct Trie* p, char url[], char* buf, size_t buf_len) {
     int i = 0;
     while (url[i]) {
         int x = C_TO_X(url[i]);
@@ -36,20 +36,14 @@ void insert(struct Trie* p, char url[], uint8_t ip_addr[4]) {
         i++;
     }
     p->is_end = 1;
-    p->tip = malloc(IP_LEN * sizeof(char));
-    for (int i = 0; i < 4; i++) p->tip->ip_addr[i] = ip_addr[i];
+    p->tip = malloc(sizeof(struct TIP));
+    strcpy(p->tip->buf, buf);
+    p->tip->buf_len = buf_len;
 }
 
 int search(struct Trie* p, char url[]) {
     p = search_prefix(p, url);
     return p && p->is_end;
-}
-
-struct TIP* get_ip(struct Trie* p, char url[]) {
-    p = search_prefix(p, url);
-    if (p == NULL || !(p->is_end)) return NULL;
-    
-    return p->tip;
 }
 
 void free_tree(struct Trie* p) {

@@ -9,7 +9,7 @@ RELAY_SRC = dns_relay/main.c dns_relay/parser.c dns_relay/checkhosts.c common/ut
 RELAY_OBJ = $(RELAY_SRC:.c=.o)
 RELAY_TARGET = ../bin/dns_relay
 
-TEST_SRC = test/test.c common/utils.c
+TEST_SRC = test/test.c common/utils.c dns_relay/cache.c common/trie.c
 TEST_OBJ = $(TEST_SRC:.c=.o)
 TEST_TARGET = ../bin/test
 
@@ -24,7 +24,13 @@ $(RELAY_TARGET): $(RELAY_OBJ)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 	rm $(RELAY_OBJ)
 
+$(TEST_TARGET): $(TEST_OBJ)
+	mkdir -p ../bin
+	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+	rm $(TEST_OBJ)
+
 dns_relay/cache.o: common/trie.o
+common/trie.o: dns_relay/parser.o
 
 # 编译对象文件
 %.o: %.c

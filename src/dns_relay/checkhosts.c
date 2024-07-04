@@ -67,6 +67,8 @@ int look_in_table(struct Message* message, struct Question* q, struct ResourceRe
 }
 
 int look_in_cache(struct Message* message, struct Question* q, struct ResourceRecord* rp) {
+    struct TIP* tip = get_ip_from_cache(q->qName);
+    if (tip) return 2;
 
     return 0;
 }
@@ -97,6 +99,7 @@ int check_hosts(struct Message* message) {
             return 0;
         if (flag_t == 0){
             flag_c = look_in_cache(message, q, res); 
+            if (flag_c == 2) return 2;
             if (flag_c == 0 && flag_t == 0){
                 printf("Not found in local.\n");
                 free(res->name);

@@ -76,16 +76,44 @@ struct Question {
 
 /* Data part of a Resource Record */
 union ResourceData {
-  struct {
-    uint8_t txt_data_len;
-    char *txt_data;
-  } txt_record;
-  struct {
-    uint8_t addr[4];
-  } a_record;
-  struct {
-    uint8_t addr[16];
-  } aaaa_record;
+    struct {
+        uint8_t txt_data_len;
+        char *txt_data;
+    } txt_record;
+    struct {
+        uint8_t addr[4];
+    } a_record;
+    struct {
+        char *MName;
+        char *RName;
+        uint32_t serial;
+        uint32_t refresh;
+        uint32_t retry;
+        uint32_t expire;
+        uint32_t minimum;
+    } soa_record;
+    struct {
+      char *name;
+    } name_server_record;
+    struct {
+        char *name;
+    } cname_record;
+    struct {
+        char *name;
+    } ptr_record;
+    struct {
+        uint16_t preference;
+        char *exchange;
+    } mx_record;
+    struct {
+        uint8_t addr[16];
+    } aaaa_record;
+    struct {
+        uint16_t priority;
+        uint16_t weight;
+        uint16_t port;
+        char *target;
+    } srv_record; // rfc2782
 };
 
 /* Resource Record Section */
