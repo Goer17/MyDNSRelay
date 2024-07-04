@@ -54,3 +54,6 @@ dkms.conf
 logs/*
 .vscode/
 bin/
+
+# MacOS
+.DS_Store
