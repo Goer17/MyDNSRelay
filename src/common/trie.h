@@ -1,9 +1,12 @@
 #ifndef TRIE_H
 #define TRIE_H
 
+#include <stdint.h>
+
 #define TRIE_LEN 95
 #define C_TO_X(x) (x - 32)
 #define TIP_BUF_LEN 512
+
 
 struct TIP {
     size_t buf_len;

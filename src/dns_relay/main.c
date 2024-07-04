@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 
 #include "../common/utils.h"
+#include "../common/logger.h"
 #include "parser.h"
 #include "checkhosts.h"
 #include "cache.h"
@@ -51,7 +52,10 @@ int main(int argc, char *argv[]) {
 
     load_map();
     init_cache();
-    printf("Relay Server Running...\n");
+    open_log();
+
+    write_time_to_log();
+    STD_LOG(printf("Relay Server Running...\n"));
     for ( ;; ) {
         client_addr_size = sizeof(client_addr);
         num_bytes = recvfrom(relay_sock, buf, BUF_SIZE, 0, (struct sockaddr*)&client_addr, &client_addr_size);
@@ -65,8 +69,9 @@ int main(int argc, char *argv[]) {
             error_handling("decoding client requirement");
         }
         
-        printf("Received one package from %s:\n", inet_ntoa(client_addr.sin_addr));
-        print_message(&message);
+        write_time_to_log();
+        STD_LOG(printf("Received one package from %s:\n", inet_ntoa(client_addr.sin_addr)));
+        STD_LOG(print_message(&message));
 
         uint16_t client_id = message.id;
         char msg_dn[128];
@@ -76,8 +81,9 @@ int main(int argc, char *argv[]) {
         int flag_t = look_in_table(&message);
         if (flag_t == DN_INVALID || flag_t == DN_FOUND_IN_TABLE) {
             uint8_t* p_buf = buf;
-            printf("Found in table, send to client:\n");
-            print_message(&message);
+            write_time_to_log();
+            STD_LOG(printf("Found in table, send to client:\n"));
+            STD_LOG(print_message(&message));
             if (encode_msg(&message, &p_buf)) {
                 error_handling("encoding the message to client (in table)");
             }
@@ -91,7 +97,7 @@ int main(int argc, char *argv[]) {
         // Search in cache
         struct TIP* tip = look_in_cache(&message);
         if (tip) {
-            printf("Found in cache...\n");
+            STD_LOG(printf("Found in cache...\n"));
             num_bytes = tip->buf_len;
             for (int i = 0; i < num_bytes; i++) buf[i] = tip->buf[i];
             uint16_t* bbuf = (uint16_t*)buf;
@@ -118,8 +124,10 @@ int main(int argc, char *argv[]) {
         if (!decode_msg(&message, buf)) {
             error_handling("decoding DNS response");
         }
-        printf("Received the response from DNS server:\n");
-        print_message(&message);
+
+        write_time_to_log();
+        STD_LOG(printf("Received the response from DNS server:\n"));
+        STD_LOG(print_message(&message));
         
         record_dn(msg_dn, buf, num_bytes);
 

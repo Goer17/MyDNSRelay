@@ -19,20 +19,33 @@ void open_log() {
     }
 }
 
-void write_log(char* txt, int len) {
+void write_time_to_log() {
     time_t now;
     time(&now);
     struct tm *local = localtime(&now);
 
     char buffer[64];
-    strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", local);
-    char time_buf[128];
-    sprintf(time_buf, "----%s----\n", buffer);
+    strftime(buffer, sizeof(buffer), "----%Y-%m-%d %H:%M:%S----\n", local);
+    if (write(log_fd, buffer, strlen(buffer)) == -1) {
+        error_handling("write");
+    }
+}
 
-    if (write(log_fd, time_buf, strlen(time_buf)) == -1) { // 写入正确的长度
-        error_handling("write_time");
+void to_log() {
+    saved_stdout_fd = dup(STDOUT_FILENO);
+    if (saved_stdout_fd == -1) {
+        error_handling("dup");
     }
-    if (write(log_fd, txt, len) == -1) {
-        error_handling("write_txt");
+
+    if (dup2(log_fd, STDOUT_FILENO) == -1) {
+        error_handling("dup2");
     }
+}
+
+void to_stdout() {
+    if (dup2(saved_stdout_fd, STDOUT_FILENO) == -1) {
+        error_handling("dup2");
+    }
+
+    close(saved_stdout_fd);
 }
