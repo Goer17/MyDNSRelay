@@ -108,24 +108,50 @@ void put32bits(uint8_t **buffer, uint32_t value) {
     *buffer += 4;
 }
 
-char *decode_domain_name(const uint8_t **buf, size_t len) {
-    char domain[256];
-    for (int i = 1; i < MIN(256, len); i += 1) {
-        uint8_t c = (*buf)[i];
-        if (c == 0) {
-            domain[i - 1] = 0;
-            *buf += i + 1;
-            return strdup(domain);
-        }
-        else if ((c >= 'a' && c <= 'z') || c == '-' || (c >= '0' && c <= '9')) {
-            domain[i - 1] = c;
-        }
-        else {
-            domain[i - 1] = '.';
-        }
+char *decode_domain_name(const uint8_t **buffer, size_t offset) {
+    char name[256];
+    const uint8_t *buf = *buffer;
+    int i = 0;
+    int j = 0;
+
+    if (buf[0] >= 0xc0) { // 1. pointer type
+        int newOffset = (((int)buf[0] & 0x3f) << 8) + buf[1];
+        const uint8_t *nameAddr = *buffer - offset + newOffset;
+        *buffer += 2;
+        return decode_domain_name(&nameAddr, newOffset);
     }
 
-    return NULL;
+    while (buf[i] != 0 && buf[i] < 0xc0) { // address part
+        if (i != 0) {
+            name[j] = '.';
+            j++;
+        }
+        int len = buf[i];
+        i += 1;
+
+        memcpy(name + j, buf + i, len);
+        i += len;
+        j += len;
+    }
+    if (buf[i] == 0x00) { // 2. pure string type
+        i++;
+    }
+    else if (buf[i] >= 0xc0) { // 3. string + pointer
+        i++;
+        int newOffset = (((int)buf[i - 1] & 0x3f) << 8) + buf[i];
+        buf = *buffer - offset + newOffset; // address of pointer
+        char *nameRemain = decode_domain_name(&buf, newOffset);
+        memcpy(name + j, nameRemain, strlen(nameRemain));
+        j += strlen(nameRemain);
+        i++;
+    }
+    else {
+        printf("ERROR: decode_domain_name\n");
+    }
+
+    *buffer += i;
+    name[j] = '\0';
+    return strdup(name);
 }
 
 void encode_domain_name(uint8_t **buffer, const char *domain) {
@@ -191,18 +217,17 @@ void encode_header(struct Message *msg, uint8_t **buffer) {
 }
 
 int decode_msg(struct Message *msg, const uint8_t *buffer, size_t size) {
-    // TODO: 格式错误返回 0
     const uint8_t *oriBuffer = buffer;
 
     decode_header(msg, &buffer);
+    
+    if (buffer - oriBuffer < 12) return 0;
 
     // print_hex(buffer, 200);
     // decode Question
     for (uint16_t i = 0; i < msg->qdCount; ++i) {
         struct Question *q = malloc(sizeof(struct Question));
-
         q->qName = decode_domain_name(&buffer, buffer - oriBuffer);
-
         q->qType = get16bits(&buffer);
         q->qClass = get16bits(&buffer);
 
@@ -215,12 +240,11 @@ int decode_msg(struct Message *msg, const uint8_t *buffer, size_t size) {
     for (uint16_t i = 0; i < msg->anCount; ++i) {
         struct ResourceRecord *rr = malloc(sizeof(struct ResourceRecord));
         decode_resource_records(rr, &buffer, oriBuffer);
-        // if (decode_resource_records(rr, &buffer, oriBuffer) == -1)
-        // return -1;
         // 添加到链表前端
         rr->next = msg->answers;
         msg->answers = rr;
     }
+
     // decode Authority
     for (uint16_t i = 0; i < msg->nsCount; ++i) {
         struct ResourceRecord *rr = malloc(sizeof(struct ResourceRecord));

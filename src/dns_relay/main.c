@@ -14,9 +14,14 @@
 #define LOCAL_PORT 53
 
 #define GOOGLE_DNS "8.8.8.8"
-#define GOOGLE_DNS_PORT 53
+#define DNS_PORT 53
 
-int main() {
+int main(int argc, char *argv[]) {
+    char dns_ip_addr[128] = GOOGLE_DNS;
+    if (argc > 1) {
+        strcpy(dns_ip_addr, argv[1]);
+    }
+
     int relay_sock;
     struct sockaddr_in local_addr, dns_addr, client_addr;
     socklen_t client_addr_size;
@@ -40,8 +45,8 @@ int main() {
 
     memset(&dns_addr, 0, sizeof(dns_addr));
     dns_addr.sin_family = AF_INET;
-    dns_addr.sin_addr.s_addr = inet_addr(GOOGLE_DNS);
-    dns_addr.sin_port = htons(GOOGLE_DNS_PORT);
+    dns_addr.sin_addr.s_addr = inet_addr(dns_ip_addr);
+    dns_addr.sin_port = htons(DNS_PORT);
 
     load_map();
     init_cache();
@@ -59,14 +64,19 @@ int main() {
         if (!decode_msg(&message, buf, num_bytes)) {
             error_handling("Decoding");
         }
+
         // print_message(&message);
+        // printf("0\n");
+        printf("num_bytes: %d\n", num_bytes);
         if (!check_hosts(&message)) {
             // Stop
             uint8_t* buf_p = (uint8_t *)buf;
+            // printf("1\n");
             if(!encode_msg(&message, &buf_p)) {
                 error_handling("Encoding");
             }
             int buf_len = buf_p - (uint8_t*)buf;
+            // printf("2\n");
             if (sendto(relay_sock, buf, buf_len, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
                 error_handling("sendto() error");
             }
@@ -82,17 +92,16 @@ int main() {
             error_handling("recvfrom() error");
         }
 
+        memset(&message, 0, sizeof(message));
         if (!decode_msg(&message, buf, num_bytes)) {
             error_handling("Decoding");
         }
-        struct ResourceRecord* as = message.answers;
-        while (as) {
-            for (int i = 0; i < 4; i++) {
-                printf("%hhu%c", as->rd_data.a_record.addr[i], ".\n"[i == 3]);
-            }
-            as = as->next;
-        }
-        
+        print_message(&message);
+        // struct ResourceRecord* as = message.answers;
+        // while (as) {
+        //     for (int i = 0; i < 4; i++) printf("%hhu%c", as->rd_data.a_record.addr[i], ".\n"[i == 3]);
+        //     as = as->next;
+        // }
 
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
             error_handling("sendto() error");
