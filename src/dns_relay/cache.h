@@ -3,7 +3,7 @@
 
 #include "../common/trie.h"
 
-struct Trie* cache_node;
+static struct Trie* cache_node;
 static int cache_cnt;
 
 void init_cache();
