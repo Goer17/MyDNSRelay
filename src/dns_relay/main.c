@@ -8,6 +8,7 @@
 #include "../common/utils.h"
 #include "parser.h"
 #include "checkhosts.h"
+#include "cache.h"
 
 #define BUF_SIZE 512
 #define LOCAL_PORT 53
@@ -43,6 +44,7 @@ int main() {
     dns_addr.sin_port = htons(GOOGLE_DNS_PORT);
 
     load_map();
+    init_cache();
     printf("Relay Server Running...\n");
     for ( ;; ) {
         client_addr_size = sizeof(client_addr);
@@ -55,7 +57,7 @@ int main() {
         struct Message message;
         memset(&message, 0, sizeof(message));
         if (!decode_msg(&message, buf, num_bytes)) {
-            error_handling("Decoding\n");
+            error_handling("Decoding");
         }
         // print_message(&message);
         if (!check_hosts(&message)) {
@@ -71,7 +73,6 @@ int main() {
             continue;
         }
 
-
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&dns_addr, sizeof(dns_addr)) == -1) {
             error_handling("sendto() error");
         }
@@ -80,6 +81,18 @@ int main() {
         if (num_bytes == -1) {
             error_handling("recvfrom() error");
         }
+
+        if (!decode_msg(&message, buf, num_bytes)) {
+            error_handling("Decoding");
+        }
+        struct ResourceRecord* as = message.answers;
+        while (as) {
+            for (int i = 0; i < 4; i++) {
+                printf("%hhu%c", as->rd_data.a_record.addr[i], ".\n"[i == 3]);
+            }
+            as = as->next;
+        }
+        
 
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
             error_handling("sendto() error");

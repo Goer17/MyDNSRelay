@@ -5,7 +5,7 @@ LDFLAGS =
 
 # 定义源文件和目标文件
 
-RELAY_SRC = dns_relay/main.c dns_relay/parser.c dns_relay/checkhosts.c common/utils.c
+RELAY_SRC = dns_relay/main.c dns_relay/parser.c dns_relay/checkhosts.c common/utils.c dns_relay/cache.c common/trie.c
 RELAY_OBJ = $(RELAY_SRC:.c=.o)
 RELAY_TARGET = ../bin/dns_relay
 
@@ -18,17 +18,13 @@ all: $(RELAY_TARGET)
 
 test: $(TEST_TARGET)
 
-# 编译 DNS client
-$(CLIENT_TARGET): $(CLIENT_OBJ)
-	mkdir -p ../bin
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
-	rm $(CLIENT_OBJ)
-
 # 编译 DNS relay
 $(RELAY_TARGET): $(RELAY_OBJ)
 	mkdir -p ../bin
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 	rm $(RELAY_OBJ)
+
+dns_relay/cache.o: common/trie.o
 
 # 编译对象文件
 %.o: %.c

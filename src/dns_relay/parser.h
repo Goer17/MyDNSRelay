@@ -141,9 +141,13 @@ size_t get16bits(const uint8_t **buffer);
 
 void put8bits(uint8_t **buffer, uint8_t value);
 
+size_t get16bits(const uint8_t **buffer);
+
 void put16bits(uint8_t **buffer, uint16_t value);
 
 void put32bits(uint8_t **buffer, uint32_t value);
+
+size_t get32bits(const uint8_t **buffer);
 
 /*
 * Deconding/Encoding functions.
@@ -158,6 +162,8 @@ void decode_header(struct Message *msg, const uint8_t **buffer);
 void encode_header(struct Message *msg, uint8_t **buffer);
 
 int decode_msg(struct Message *msg, const uint8_t *buffer, size_t size);
+
+int decode_resource_records(struct ResourceRecord *rr, const uint8_t **buffer, const uint8_t *oriBuffer);
 
 int encode_resource_records(struct ResourceRecord *rr, uint8_t **buffer);
 

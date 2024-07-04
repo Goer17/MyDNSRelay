@@ -6,7 +6,7 @@
 #define IP_LEN 128
 
 struct TIP {
-    char ip_addr[IP_LEN];
+    uint8_t ip_addr[4];
 };
 
 struct Trie {
@@ -17,7 +17,7 @@ struct Trie {
 
 struct Trie* create_node();
 struct Trie* search_prefix(struct Trie* p, char prefix[]);
-void insert(struct Trie* p, char url[], char ip_addr[]);
+void insert(struct Trie* p, char url[], uint8_t ip_addr[4]);
 int search(struct Trie* p, char url[]);
 struct TIP* get_ip(struct Trie* p, char url[]);
 void free_tree(struct Trie* p);

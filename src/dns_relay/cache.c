@@ -6,7 +6,7 @@ void init_cache() {
     cache_cnt = 0;
 }
 
-void record_dn(char url[], char ip_addr[]) {
+void record_dn(char url[], uint8_t ip_addr[4]) {
     insert(cache_node, url, ip_addr);
     cache_cnt++;
 }

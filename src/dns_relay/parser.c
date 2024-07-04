@@ -67,10 +67,26 @@ void print_message(struct Message *msg) {
     printf("}\n");
 }
 
+size_t get8bits(const uint8_t **buffer) {
+    uint8_t value;
+    memcpy(&value, *buffer, 1);
+    *buffer += 1;
+
+    return ntohs(value);
+}
+
 size_t get16bits(const uint8_t **buffer) {
     uint16_t value;
     memcpy(&value, *buffer, 2);
     *buffer += 2;
+
+    return ntohs(value);
+}
+
+size_t get32bits(const uint8_t **buffer) {
+    uint32_t value;
+    memcpy(&value, *buffer, 4);
+    *buffer += 4;
 
     return ntohs(value);
 }
@@ -175,35 +191,58 @@ void encode_header(struct Message *msg, uint8_t **buffer) {
 }
 
 int decode_msg(struct Message *msg, const uint8_t *buffer, size_t size) {
-    int i;
-    if (size < 12)
-        return 1;
-    decode_header(msg, &buffer);
-    if (msg->anCount != 0 || msg->nsCount != 0) {
-        printf("Only questions expected!\n");
-        return 0;
-    }
-    // parse questions
-    uint32_t qcount = msg->qdCount;
-    for (i = 0; i < qcount; i += 1) {
-        struct Question *q = calloc(1, sizeof(struct Question));
+    // TODO: 格式错误返回 0
+    const uint8_t *oriBuffer = buffer;
 
-        q->qName = decode_domain_name(&buffer, size);
+    decode_header(msg, &buffer);
+
+    // print_hex(buffer, 200);
+    // decode Question
+    for (uint16_t i = 0; i < msg->qdCount; ++i) {
+        struct Question *q = malloc(sizeof(struct Question));
+
+        q->qName = decode_domain_name(&buffer, buffer - oriBuffer);
+
         q->qType = get16bits(&buffer);
         q->qClass = get16bits(&buffer);
 
-        if (q->qName == NULL) {
-            printf("Failed to decode domain name!\n");
-            return 0;
-        }
-
-        // prepend question to questions list
+        // 添加到链表前端
         q->next = msg->questions;
         msg->questions = q;
     }
 
-    // We do not expect any resource records to parse here.
+    // decode Answer
+    for (uint16_t i = 0; i < msg->anCount; ++i) {
+        struct ResourceRecord *rr = malloc(sizeof(struct ResourceRecord));
+        decode_resource_records(rr, &buffer, oriBuffer);
+        // if (decode_resource_records(rr, &buffer, oriBuffer) == -1)
+        // return -1;
+        // 添加到链表前端
+        rr->next = msg->answers;
+        msg->answers = rr;
+    }
+    // decode Authority
+    for (uint16_t i = 0; i < msg->nsCount; ++i) {
+        struct ResourceRecord *rr = malloc(sizeof(struct ResourceRecord));
+        decode_resource_records(rr, &buffer, oriBuffer);
+        // 添加到链表前端
+        rr->next = msg->authorities;
+        msg->authorities = rr;
+    }
+
     return 1;
+}
+
+int decode_resource_records(struct ResourceRecord *rr, const uint8_t **buffer, const uint8_t *oriBuffer) {
+    // print_hex(*buffer, 50);
+    rr->name = decode_domain_name(buffer, *buffer - oriBuffer);
+    rr->type = get16bits(buffer);
+    rr->cls = get16bits(buffer);
+    rr->ttl = get32bits(buffer);
+    rr->rd_length = get16bits(buffer);
+    for (int i = 0; i < 4; ++i)
+        rr->rd_data.a_record.addr[i] = get8bits(buffer);
+    return 0;
 }
 
 int encode_resource_records(struct ResourceRecord *rr, uint8_t **buffer) {

@@ -8,8 +8,7 @@
 
 #include "checkhosts.h"
 #include "../common/utils.h"
-
-
+#include "cache.h"
 
 int ipv4_string_to_uint8(const char *ipv4_str, uint8_t *add) {
     struct in_addr addr;
@@ -28,9 +27,7 @@ int ipv4_string_to_uint8(const char *ipv4_str, uint8_t *add) {
     ip[3] = ip_addr & 0xFF;
     add[3] = ip[3];
     return 0; // 转换成功
-    }
-
-
+}
 
 void load_map() {
     int fd = open("../knownhosts.txt", O_RDONLY);
@@ -60,7 +57,7 @@ int look_in_table(struct Message* message, struct Question* q, struct ResourceRe
                 return -1;
             }
             else {
-                ipv4_string_to_uint8(ip[i],rp->rd_data.a_record.addr);
+                ipv4_string_to_uint8(ip[i], rp->rd_data.a_record.addr);
                 return 1;
             }
         }
@@ -70,7 +67,7 @@ int look_in_table(struct Message* message, struct Question* q, struct ResourceRe
 }
 
 int look_in_cache(struct Message* message, struct Question* q, struct ResourceRecord* rp) {
-    //if finded return 1
+
     return 0;
 }
 

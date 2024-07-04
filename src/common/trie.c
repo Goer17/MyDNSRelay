@@ -25,7 +25,7 @@ struct Trie* search_prefix(struct Trie* p, char prefix[]) {
     return p;
 }
 
-void insert(struct Trie* p, char url[], char ip_addr[]) {
+void insert(struct Trie* p, char url[], uint8_t ip_addr[4]) {
     int i = 0;
     while (url[i]) {
         int x = C_TO_X(url[i]);
@@ -37,7 +37,7 @@ void insert(struct Trie* p, char url[], char ip_addr[]) {
     }
     p->is_end = 1;
     p->tip = malloc(IP_LEN * sizeof(char));
-    strcpy(p->tip->ip_addr, ip_addr);
+    for (int i = 0; i < 4; i++) p->tip->ip_addr[i] = ip_addr[i];
 }
 
 int search(struct Trie* p, char url[]) {
