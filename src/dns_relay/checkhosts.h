@@ -10,9 +10,19 @@ static char dn[MAX_MAP_NUM][MAX_LEN];
 static char ip[MAX_MAP_NUM][MAX_LEN];
 static int dn_cnt = 0;
 
+enum {
+    DN_INVALID,
+    DN_FOUND_IN_TABLE,
+    DN_NOT_IN_TABLE
+};
+
+enum {
+    DN_IN_CACHE,
+    DN_NOT_IN_CACHE
+};
+
 void load_map();
-int check_hosts(struct Message* message);
-int look_in_table(struct Message* message, struct Question* q, struct ResourceRecord* res);
-int look_in_cache(struct Message* message, struct Question* q, struct ResourceRecord* res);
+int look_in_table(struct Message* message);
+struct TIP* look_in_cache(struct Message* message);
 
 #endif // CHECKHOSTS_H

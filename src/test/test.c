@@ -1,5 +1,7 @@
 #include <stdio.h>
+#include <string.h>
 #include "../common/utils.h"
+#include "../common/logger.h"
 #include "../dns_relay/cache.h"
 
 void test_cache() {
@@ -15,8 +17,14 @@ void test_cache() {
     }
 }
 
+void test_logger() {
+    open_log();
+    char buf[] = "Hello, world!\n";
+    write_log(buf, strlen(buf));
+}
+
 int main(int argc, char const *argv[]) {
-    test_cache();
+    test_logger();
 
     return 0;
 }

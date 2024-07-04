@@ -9,7 +9,7 @@ RELAY_SRC = dns_relay/main.c dns_relay/parser.c dns_relay/checkhosts.c common/ut
 RELAY_OBJ = $(RELAY_SRC:.c=.o)
 RELAY_TARGET = ../bin/dns_relay
 
-TEST_SRC = test/test.c common/utils.c dns_relay/cache.c common/trie.c
+TEST_SRC = dns_relay/parser.c test/test.c common/utils.c dns_relay/cache.c common/trie.c common/logger.c
 TEST_OBJ = $(TEST_SRC:.c=.o)
 TEST_TARGET = ../bin/test
 

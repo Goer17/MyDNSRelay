@@ -7,7 +7,7 @@ void init_cache() {
     cache_cnt = 0;
 }
 
-void record_dn(char url[], char* buf, size_t buf_len) {
+void record_dn(char url[], uint8_t* buf, size_t buf_len) {
     insert(cache_node, url, buf, buf_len);
     cache_cnt++;
     printf("Adding a new record: %s\n", url);

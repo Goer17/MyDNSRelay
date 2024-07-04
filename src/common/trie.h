@@ -18,7 +18,7 @@ struct Trie {
 
 struct Trie* create_node();
 struct Trie* search_prefix(struct Trie* p, char prefix[]);
-void insert(struct Trie* p, char url[], char* buf, size_t buf_len);
+void insert(struct Trie* p, char url[], uint8_t* buf, size_t buf_len);
 int search(struct Trie* p, char url[]);
 
 void free_tree(struct Trie* p);

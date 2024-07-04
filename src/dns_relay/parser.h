@@ -1,7 +1,9 @@
 #ifndef PARSER_H
 #define PARSER_H
 
+#include <stdio.h>
 #include <stdint.h>
+
 
 #define MIN(x, y) ((x) <= (y) ? (x) : (y))
 
@@ -181,7 +183,7 @@ size_t get32bits(const uint8_t **buffer);
 * Deconding/Encoding functions.
 */
 
-char *decode_domain_name(const uint8_t **buf, size_t len);
+char *decode_domain_name(const uint8_t **buf, int offset);
 
 void encode_domain_name(uint8_t **buffer, const char *domain);
 
@@ -189,7 +191,7 @@ void decode_header(struct Message *msg, const uint8_t **buffer);
 
 void encode_header(struct Message *msg, uint8_t **buffer);
 
-int decode_msg(struct Message *msg, const uint8_t *buffer, size_t size);
+int decode_msg(struct Message *msg, const uint8_t *buffer);
 
 int decode_resource_records(struct ResourceRecord *rr, const uint8_t **buffer, const uint8_t *oriBuffer);
 

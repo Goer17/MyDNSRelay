@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     int relay_sock;
     struct sockaddr_in local_addr, dns_addr, client_addr;
     socklen_t client_addr_size;
-    char buf[BUF_SIZE];
+    uint8_t buf[BUF_SIZE];
     ssize_t num_bytes;
 
     relay_sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
         error_handling("socket() error");
     }
 
-    // 本地地址
+    // Local address
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
     local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -43,6 +43,7 @@ int main(int argc, char *argv[]) {
         error_handling("bind() error");
     }
 
+    // DNS address
     memset(&dns_addr, 0, sizeof(dns_addr));
     dns_addr.sin_family = AF_INET;
     dns_addr.sin_addr.s_addr = inet_addr(dns_ip_addr);
@@ -55,58 +56,76 @@ int main(int argc, char *argv[]) {
         client_addr_size = sizeof(client_addr);
         num_bytes = recvfrom(relay_sock, buf, BUF_SIZE, 0, (struct sockaddr*)&client_addr, &client_addr_size);
         if (num_bytes == -1) {
-            error_handling("recvfrom() error");
+            error_handling("recvfrom client");
         }
-        printf("Received one package from %s\n", inet_ntoa(client_addr.sin_addr));
         
         struct Message message;
         memset(&message, 0, sizeof(message));
-        if (!decode_msg(&message, buf, num_bytes)) {
-            error_handling("Decoding");
+        if (!decode_msg(&message, buf)) {
+            error_handling("decoding client requirement");
         }
-        char msg_dn[128];
-        strcpy(msg_dn, message.questions->qName); 
+        
+        printf("Received one package from %s:\n", inet_ntoa(client_addr.sin_addr));
         print_message(&message);
-        // printf("0\n");
-        // printf("num_bytes: %d\n", num_bytes);
-        int flag_c = check_hosts(&message);
-        if (flag_c == 0) {
-            uint8_t* buf_p = (uint8_t *)buf;
-            if(!encode_msg(&message, &buf_p)) {
-                error_handling("Encoding");
+
+        uint16_t client_id = message.id;
+        char msg_dn[128];
+        strcpy(msg_dn, message.questions->qName);
+
+        // Search in table
+        int flag_t = look_in_table(&message);
+        if (flag_t == DN_INVALID || flag_t == DN_FOUND_IN_TABLE) {
+            uint8_t* p_buf = buf;
+            printf("Found in table, send to client:\n");
+            print_message(&message);
+            if (encode_msg(&message, &p_buf)) {
+                error_handling("encoding the message to client (in table)");
             }
-            int buf_len = buf_p - (uint8_t*)buf;
-            if (sendto(relay_sock, buf, buf_len, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
-                error_handling("sendto() error");
+            num_bytes = p_buf - buf;
+            if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
+                error_handling("sendto the client (in table)");
             }
             continue;
         }
 
-        if (flag_c == 2) {
-            printf("Found in cache.\n");
-            struct TIP* tip = get_ip_from_cache(message.questions->qName);
-            strcpy(buf, tip->buf);
-            int buf_len = tip->buf_len;
-            // TODO 更改 buf ID
-            if (sendto(relay_sock, buf, buf_len, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
-                error_handling("sendto() error");
+        // Search in cache
+        struct TIP* tip = look_in_cache(&message);
+        if (tip) {
+            printf("Found in cache...\n");
+            num_bytes = tip->buf_len;
+            for (int i = 0; i < num_bytes; i++) buf[i] = tip->buf[i];
+            uint16_t* bbuf = (uint16_t*)buf;
+            bbuf[0] = htons(client_id);
+
+            if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
+                error_handling("sendto the client (in table)");
             }
             continue;
         }
 
+        // Send requirement to DNS server if necessary
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&dns_addr, sizeof(dns_addr)) == -1) {
-            error_handling("sendto() error");
+            error_handling("sendto DNS");
         }
 
+        // Received response from DNS server
         num_bytes = recvfrom(relay_sock, buf, BUF_SIZE, 0, NULL, NULL);
         if (num_bytes == -1) {
-            error_handling("recvfrom() error");
+            error_handling("recvfrom DNS");
         }
+
+        memset(&message, 0, sizeof(message));
+        if (!decode_msg(&message, buf)) {
+            error_handling("decoding DNS response");
+        }
+        printf("Received the response from DNS server:\n");
         print_message(&message);
+        
         record_dn(msg_dn, buf, num_bytes);
 
+        // Send the response to client
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
-            error_handling("sendto() error");
+            error_handling("sendto");
         }
     }
 

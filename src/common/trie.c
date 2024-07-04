@@ -25,7 +25,7 @@ struct Trie* search_prefix(struct Trie* p, char prefix[]) {
     return p;
 }
 
-void insert(struct Trie* p, char url[], char* buf, size_t buf_len) {
+void insert(struct Trie* p, char url[], uint8_t* buf, size_t buf_len) {
     int i = 0;
     while (url[i]) {
         int x = C_TO_X(url[i]);
@@ -37,7 +37,9 @@ void insert(struct Trie* p, char url[], char* buf, size_t buf_len) {
     }
     p->is_end = 1;
     p->tip = malloc(sizeof(struct TIP));
-    strcpy(p->tip->buf, buf);
+    for (int i = 0; i < buf_len; i++) {
+        p->tip->buf[i] = buf[i];
+    }
     p->tip->buf_len = buf_len;
 }
 

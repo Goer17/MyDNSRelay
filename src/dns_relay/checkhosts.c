@@ -47,70 +47,37 @@ void load_map() {
     close(fd);
 }
 
-int look_in_table(struct Message* message, struct Question* q, struct ResourceRecord* rp) {
+int look_in_table(struct Message* message) {
+    struct Question* q = message->questions; // 只有一个请求
     for (int i = 0; i < dn_cnt; i++) {
         if (strcmp(q->qName, dn[i]) == 0) {
-            printf("found in table.\n");
+            printf("Found in table...\n");
+            message->qr = 1;
+            message->aa = 1;
             if (strcmp(ip[i], "0.0.0.0") == 0) {
                 message->rcode = NameError_ResponseCode;
                 printf("Invalid Domain: %s\n", dn[i]);
-                return -1;
+                return DN_INVALID;
             }
             else {
+                message->answers = malloc(sizeof(struct ResourceRecord));
+                struct ResourceRecord* rp = message->answers;
+                rp->next = NULL;
+                rp->cls = q->qClass;
+                rp->type = q->qType;
+                rp->ttl = 1800;
+                rp->rd_length = 4; // Table 里面只有 4
+                rp->name = q->qName; // ?
+                message->anCount++;
                 ipv4_string_to_uint8(ip[i], rp->rd_data.a_record.addr);
-                return 1;
+                return DN_FOUND_IN_TABLE;
             }
         }
     }
-    return 0;
-
+    return DN_NOT_IN_TABLE;
 }
 
-int look_in_cache(struct Message* message, struct Question* q, struct ResourceRecord* rp) {
-    struct TIP* tip = get_ip_from_cache(q->qName);
-    if (tip) return 2;
+struct TIP* look_in_cache(struct Message* message) {
 
-    return 0;
-}
-
-int check_hosts(struct Message* message) {
-    message->qr = 1;
-    message->aa = 1;
-    message->ra = 1;
-    message->anCount = 0;
-    message->nsCount = 0;
-    message->arCount = 0;
-    struct Question* q = message->questions;
-    struct ResourceRecord* res = NULL;
-    while (q) {
-
-        res = malloc(sizeof(struct ResourceRecord));
-        memset(res,0,sizeof(struct ResourceRecord));
-
-        res->name = q->qName;
-        res->type = q->qType;
-        res->cls = q->qClass;
-        res->ttl = 1800;
-        res->rd_length = 4;
-        int flag_t = look_in_table(message, q, res);
-        int flag_c = 0;
-
-        if (flag_t == -1) 
-            return 0;
-        if (flag_t == 0){
-            flag_c = look_in_cache(message, q, res); 
-            if (flag_c == 2) return 2;
-            if (flag_c == 0 && flag_t == 0){
-                printf("Not found in local.\n");
-                free(res->name);
-                free(res);
-                return 1;
-            }
-        }
-        message->anCount++;
-        res->next = message->answers;
-        message->answers = res;
-        q = q->next;
-    }
-    return 0;
+    return get_ip_from_cache(message->questions->qName);
 }
