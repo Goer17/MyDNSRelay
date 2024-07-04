@@ -17,11 +17,31 @@
 #define GOOGLE_DNS "8.8.8.8"
 #define DNS_PORT 53
 
+#define YELLOW "\033[1;33m"
+#define GERREN "\033[1;32m"
+#define RESET "\033[0m"
+
+void show_product() {
+    printf(YELLOW);
+    printf(" __  __       ____      _\n");
+    printf("|  \\/  |_   _|  _ \\ ___| | __ _ _   _\n");
+    printf("| |\\/| | | | | |_) / _ \\ |/ _` | | | |\n");
+    printf("| |  | | |_| |  _ <  __/ | (_| | |_| |\n");
+    printf("|_|  |_|\\__, |_| \\_\\___|_|\\__,_|\\__, |\n");
+    printf("        |___/                   |___/\n");
+    printf("\n");
+    printf(GERREN);
+    printf("- Author: Yuanyang Li, Chenhui Qiu, Linhan Song\n");
+    printf("- Usage: ./myrelay <dns-ip-addr | optional>\n\n");
+    printf(RESET);
+}
+
 int main(int argc, char *argv[]) {
     char dns_ip_addr[128] = GOOGLE_DNS;
     if (argc > 1) {
         strcpy(dns_ip_addr, argv[1]);
     }
+    show_product();
 
     int relay_sock;
     struct sockaddr_in local_addr, dns_addr, client_addr;

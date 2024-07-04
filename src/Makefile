@@ -7,7 +7,7 @@ LDFLAGS =
 
 RELAY_SRC = dns_relay/main.c dns_relay/parser.c dns_relay/checkhosts.c common/utils.c dns_relay/cache.c common/trie.c common/logger.c
 RELAY_OBJ = $(RELAY_SRC:.c=.o)
-RELAY_TARGET = ../bin/dns_relay
+RELAY_TARGET = ../bin/myrelay
 
 TEST_SRC = dns_relay/parser.c test/test.c common/utils.c dns_relay/cache.c common/trie.c common/logger.c
 TEST_OBJ = $(TEST_SRC:.c=.o)
