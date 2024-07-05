@@ -16,6 +16,7 @@ timeout_count = 0
 stop_event = threading.Event()
 query_started = False
 
+
 # Function to perform the nslookup query
 def query_domain(domain, ip_address):
     command = ['nslookup', domain, ip_address]
@@ -27,10 +28,12 @@ def query_domain(domain, ip_address):
     except subprocess.TimeoutExpired:
         return f"Timeout querying {domain}"
 
+
 # Function to load domains from a file
 def load_domains(file_path):
     with open(file_path, 'r') as file:
         return [line.strip() for line in file if line.strip()]
+
 
 # Function to execute concurrent queries
 def concurrent_queries(domains, ip_address, max_workers, query_interval, num_queries=None):
@@ -69,17 +72,19 @@ def concurrent_queries(domains, ip_address, max_workers, query_interval, num_que
                 timeout_rate_data.append(timeout_rate)
                 time_data.append(current_time)
 
+
 def start_queries(ip_address, query_interval, max_workers, num_queries):
     global stop_event, query_started
     stop_event.set()  # Stop any ongoing queries
-    time.sleep(1)  # Wait for the previous threads to finish
     stop_event.clear()
     domains = load_domains('data.txt')
     query_started = True
-    threading.Thread(target=concurrent_queries, args=(domains, ip_address, max_workers, query_interval, num_queries)).start()
+    threading.Thread(target=concurrent_queries,
+                     args=(domains, ip_address, max_workers, query_interval, num_queries)).start()
+
 
 # Streamlit app layout
-st.title("DNS Query Dashboard")
+st.title("DNS Pressure Test")
 
 # Sidebar for inputs
 st.sidebar.title("Settings")
@@ -95,34 +100,66 @@ st.sidebar.title("Results")
 if start_button:
     start_queries(ip_address, query_interval, max_workers, num_queries)
 
-# Create an empty placeholder for the graph
+# Create empty placeholders for the graph and metrics
 graph_placeholder = st.empty()
+metrics_placeholder = st.empty()
 
-# Real-time update of the graph
+# Progress bar initialization
+progress_bar = st.sidebar.progress(0)
+
+# Real-time update of the graph and metrics
 while query_started and len(results) < num_queries:
     if stop_event.is_set():
         break
-    time.sleep(1)
+    time.sleep(1)  # Ensure updates every 1 second
     if len(time_data) > 0:
+        progress = min(len(results) / num_queries, 1.0)
+        progress_bar.progress(progress)
+
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=time_data, y=packet_rate_data, mode='lines', name='Packet Rate (qps)'))
+        fig.add_trace(go.Scatter(x=time_data, y=packet_rate_data, mode='lines', name='Speed (qps)'))
         fig.add_trace(go.Scatter(x=time_data, y=timeout_rate_data, mode='lines', name='Timeout Rate'))
 
         fig.update_layout(
-            title='Packet Rate and Timeout Rate Over Time',
+            title='Queries Speed and Timeout Rate Over Time',
             xaxis_title='Time (seconds)',
             yaxis_title='Rate',
             legend_title='Rate Type',
-            plot_bgcolor='#1f1f1f',
-            paper_bgcolor='#1f1f1f',
+            plot_bgcolor='#0E1117',
+            paper_bgcolor='#0E1117',
             font=dict(color='white')
         )
 
         fig.update_layout(width=800, height=600)
         graph_placeholder.plotly_chart(fig, use_container_width=True)
 
+        # Calculate and display packet rate and timeout rate
+        total_time = time_data[-1]
+        packet_rate = len(results) / total_time if total_time > 0 else 0.0
+        timeout_rate = timeout_count / len(results) if len(results) > 0 else 0.0
+        elapsed_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
+
+        # Update metrics
+        metrics_placeholder.empty()
+        metrics_placeholder.text(f"Total Queries: {len(results)}\n"
+                                 f"Timeouts: {timeout_count}\n"
+                                 f"Speed: {packet_rate:.2f} qps\n"
+                                 f"Timeout Rate: {timeout_rate:.2%}\n"
+                                 f"Run Time: {elapsed_time}")
+
 # Only show the final counts after queries are completed
 if query_started and len(results) >= num_queries:
     st.sidebar.text(f"Total Queries: {len(results)}")
     st.sidebar.text(f"Timeouts: {timeout_count}")
+
+    # Calculate and display packet rate and timeout rate
+    if len(time_data) > 0:
+        total_time = time_data[-1]
+        packet_rate = len(results) / total_time if total_time > 0 else 0.0
+        timeout_rate = timeout_count / len(results) if len(results) > 0 else 0.0
+        elapsed_time = time.strftime("%H:%M:%S", time.gmtime(total_time))
+        st.sidebar.text(f"Speed: {packet_rate:.2f} qps")
+        st.sidebar.text(f"Timeout Rate: {timeout_rate:.2%}")
+        st.sidebar.text(f"Run Time: {elapsed_time}")
+
     query_started = False
