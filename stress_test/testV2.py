@@ -86,9 +86,7 @@ def start_queries(ip_address, query_interval, max_workers, num_queries):
 
 # Streamlit app layout
 st.title("DNS Pressure Test")
-st.markdown("For more details, please visit our [GitHub project](https://github.com/Goer17/SimpleDNS/tree/main).")
-st.markdown("- **Packet Rate**: $V_{Speed} = \\frac{Total queries}{Total time}$")
-st.markdown("- **Timeout Rate**: $Timeout Rate = \\frac{Timeout count}{Total queries}×100%$")
+st.markdown("This program is used to test the effectiveness of DNS relay. For more details, please visit our [GitHub](https://github.com/Goer17/SimpleDNS/tree/main).")
 
 # Sidebar for inputs
 st.sidebar.title("Settings")
@@ -101,6 +99,8 @@ start_button = st.sidebar.button("Start")
 
 # Main content area for the graph
 st.sidebar.title("Results")
+st.sidebar.markdown("**Speed**: $\\frac{Total queries}{Total time}$")
+st.sidebar.markdown("**Timeout Rate**: $\\frac{Timeout count}{Total queries}×100\\%$")
 
 if start_button:
     start_queries(ip_address, query_interval, max_workers, num_queries)
