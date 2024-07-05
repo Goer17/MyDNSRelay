@@ -148,6 +148,9 @@ int main(int argc, char *argv[]) {
         write_time_to_log();
         STD_LOG(printf("Received the response from DNS server:\n"));
         STD_LOG(print_message(&message));
+
+        if (!message.qr) continue;
+
         if (message.qr && message.rcode == NoError_ResponseCode) {
             record_dn(msg_dn, buf, num_bytes);
         }
