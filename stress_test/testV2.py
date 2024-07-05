@@ -15,13 +15,14 @@ total_domains = 0
 timeout_count = 0
 stop_event = threading.Event()
 query_started = False
+timeout_duration = 5  # Default timeout duration in seconds
 
 
 # Function to perform the nslookup query
-def query_domain(domain, ip_address):
+def query_domain(domain, ip_address, timeout):
     command = ['nslookup', domain, ip_address]
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=5)
+        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=timeout)
         return f"{domain}: {result.stdout}"
     except subprocess.CalledProcessError as e:
         return f"Error querying {domain}: {e}"
@@ -51,7 +52,7 @@ def concurrent_queries(domains, ip_address, max_workers, query_interval, num_que
     time_data = []
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {executor.submit(query_domain, domain, ip_address): domain for domain in domains[:num_queries]}
+        futures = {executor.submit(query_domain, domain, ip_address, timeout_duration): domain for domain in domains[:num_queries]}
         for future in as_completed(futures):
             if stop_event.is_set():
                 break
@@ -85,13 +86,17 @@ def start_queries(ip_address, query_interval, max_workers, num_queries):
 
 # Streamlit app layout
 st.title("DNS Pressure Test")
+st.markdown("For more details, please visit our [GitHub project](https://github.com/Goer17/SimpleDNS/tree/main).")
+st.markdown("- **Packet Rate**: $V_{Speed} = \\frac{Total queries}{Total time}$")
+st.markdown("- **Timeout Rate**: $Timeout Rate = \\frac{Timeout count}{Total queries}×100%$")
 
 # Sidebar for inputs
 st.sidebar.title("Settings")
 ip_address = st.sidebar.text_input("DNS Relay IP Address", "172.200.1.50")
-query_interval = st.sidebar.number_input("Query Interval (seconds)", value=0.5, min_value=0.1, max_value=10.0, step=0.1)
+query_interval = st.sidebar.number_input("Query Interval (seconds)", value=0.5, min_value=0.001, max_value=10.0, step=0.001)
 max_workers = st.sidebar.number_input("Max Workers", value=1, min_value=1, max_value=10, step=1)
-num_queries = st.sidebar.number_input("Number of Queries", value=10, min_value=1, max_value=100, step=1)
+num_queries = st.sidebar.number_input("Number of Queries", value=10, min_value=1, max_value=300000, step=1)
+timeout_duration = st.sidebar.number_input("Timeout Duration (seconds)", value=5.0, min_value=1.0, max_value=60.0, step=0.1)
 start_button = st.sidebar.button("Start")
 
 # Main content area for the graph
@@ -111,7 +116,7 @@ progress_bar = st.sidebar.progress(0)
 while query_started and len(results) < num_queries:
     if stop_event.is_set():
         break
-    time.sleep(1)  # Ensure updates every 1 second
+    time.sleep(0.25)  # Ensure updates every 1 second
     if len(time_data) > 0:
         progress = min(len(results) / num_queries, 1.0)
         progress_bar.progress(progress)
