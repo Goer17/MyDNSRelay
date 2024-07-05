@@ -148,8 +148,9 @@ int main(int argc, char *argv[]) {
         write_time_to_log();
         STD_LOG(printf("Received the response from DNS server:\n"));
         STD_LOG(print_message(&message));
-        
-        record_dn(msg_dn, buf, num_bytes);
+        if (message.qr && message.rcode == NoError_ResponseCode) {
+            record_dn(msg_dn, buf, num_bytes);
+        }
 
         // Send the response to client
         if (sendto(relay_sock, buf, num_bytes, 0, (struct sockaddr*)&client_addr, client_addr_size) == -1) {
