@@ -1,9 +1,20 @@
 import subprocess
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from tqdm import tqdm
+import threading
 import streamlit as st
-import numpy as np
+import plotly.graph_objects as go
+
+# Global variables to store results and metrics
+results = []
+packet_rate_data = []
+timeout_rate_data = []
+time_data = []
+start_time = 0
+total_domains = 0
+timeout_count = 0
+stop_event = threading.Event()
+query_started = False
 
 # Function to perform the nslookup query
 def query_domain(domain, ip_address):
@@ -23,79 +34,95 @@ def load_domains(file_path):
 
 # Function to execute concurrent queries
 def concurrent_queries(domains, ip_address, max_workers, query_interval, num_queries=None):
+    global results, packet_rate_data, timeout_rate_data, time_data, start_time, total_domains, timeout_count
     total_domains = len(domains)
     if num_queries is not None:
         total_domains = min(total_domains, num_queries)
 
     results = []
-    timeouts = 0
+    timeout_count = 0
     start_time = time.time()
 
-    # Initialize lists to store the data for plotting
-    timeout_rates_history = []
-    packet_rates_history = []
+    packet_rate_data = []
+    timeout_rate_data = []
+    time_data = []
 
-    # Use tqdm to display a progress bar
-    with tqdm(total=total_domains, desc="Pressure Testing") as pbar:
-        # Use ThreadPoolExecutor for concurrent queries
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit query tasks to the thread pool
-            futures = {executor.submit(query_domain, domain, ip_address): domain for domain in domains}
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {executor.submit(query_domain, domain, ip_address): domain for domain in domains[:num_queries]}
+        for future in as_completed(futures):
+            if stop_event.is_set():
+                break
+            domain = futures[future]
+            try:
+                result = future.result()
+                results.append(result)
+            except Exception as e:
+                results.append(f"Error querying {domain}: {e}")
+            finally:
+                time.sleep(query_interval)
+                if "Timeout" in result:
+                    timeout_count += 1
+                current_time = time.time() - start_time
+                packet_rate = len(results) / current_time if current_time > 0 else 0.0
+                timeout_rate = timeout_count / len(results) if len(results) > 0 else 0.0
+                packet_rate_data.append(packet_rate)
+                timeout_rate_data.append(timeout_rate)
+                time_data.append(current_time)
 
-            # Iterate over completed futures to get query results
-            for future in as_completed(futures):
-                domain = futures[future]
-                try:
-                    result = future.result()
-                    results.append(result)
-                except Exception as e:
-                    results.append(f"Error querying {domain}: {e}")
-                finally:
-                    # Update the progress bar
-                    pbar.update()
+def start_queries(ip_address, query_interval, max_workers, num_queries):
+    global stop_event, query_started
+    stop_event.set()  # Stop any ongoing queries
+    time.sleep(1)  # Wait for the previous threads to finish
+    stop_event.clear()
+    domains = load_domains('data.txt')
+    query_started = True
+    threading.Thread(target=concurrent_queries, args=(domains, ip_address, max_workers, query_interval, num_queries)).start()
 
-                    # Calculate elapsed time and packet rate
-                    elapsed_time = time.time() - start_time
-                    packet_rate = len(results) / elapsed_time if elapsed_time > 0 else 0.0
+# Streamlit app layout
+st.title("DNS Query Dashboard")
 
-                    # Update timeout rate
-                    if "Timeout" in result:
-                        timeouts += 1
-                    timeout_rate = timeouts / len(results) if len(results) > 0 else 0.0
+# Sidebar for inputs
+st.sidebar.title("Settings")
+ip_address = st.sidebar.text_input("DNS Relay IP Address", "172.200.1.50")
+query_interval = st.sidebar.number_input("Query Interval (seconds)", value=0.5, min_value=0.1, max_value=10.0, step=0.1)
+max_workers = st.sidebar.number_input("Max Workers", value=1, min_value=1, max_value=10, step=1)
+num_queries = st.sidebar.number_input("Number of Queries", value=10, min_value=1, max_value=100, step=1)
+start_button = st.sidebar.button("Start")
 
-                    # Store data for plotting
-                    timeout_rates_history.append(timeout_rate)
-                    packet_rates_history.append(packet_rate)
+# Main content area for the graph
+st.sidebar.title("Results")
 
-                    # Update the graphs every certain number of queries or time interval
-                    if len(results) % 10 == 0 or (time.time() - start_time) > 1:
-                        st.pyplot()  # This will trigger the plot update
-                        st.line_chart(np.array(timeout_rates_history))
-                        st.line_chart(np.array(packet_rates_history))
+if start_button:
+    start_queries(ip_address, query_interval, max_workers, num_queries)
 
-                    # Sleep for the specified query interval
-                    time.sleep(query_interval)
+# Create an empty placeholder for the graph
+graph_placeholder = st.empty()
 
-    # Final update of the graphs
-    st.pyplot()
-    st.line_chart(np.array(timeout_rates_history))
-    st.line_chart(np.array(packet_rates_history))
+# Real-time update of the graph
+while query_started and len(results) < num_queries:
+    if stop_event.is_set():
+        break
+    time.sleep(1)
+    if len(time_data) > 0:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=time_data, y=packet_rate_data, mode='lines', name='Packet Rate (qps)'))
+        fig.add_trace(go.Scatter(x=time_data, y=timeout_rate_data, mode='lines', name='Timeout Rate'))
 
-    return results
+        fig.update_layout(
+            title='Packet Rate and Timeout Rate Over Time',
+            xaxis_title='Time (seconds)',
+            yaxis_title='Rate',
+            legend_title='Rate Type',
+            plot_bgcolor='#1f1f1f',
+            paper_bgcolor='#1f1f1f',
+            font=dict(color='white')
+        )
 
-# Main program
-if __name__ == "__main__":
-    st.title("DNS 查询压力测试仪表板")
-    domain_file_path = 'data.txt'
-    ip_address = '172.200.1.50'
-    max_workers = 10
-    query_interval = 0.01
-    num_queries = None
+        fig.update_layout(width=800, height=600)
+        graph_placeholder.plotly_chart(fig, use_container_width=True)
 
-    # Load domains from file
-    domains = load_domains(domain_file_path)
-
-    # Execute concurrent queries and plot the graphs
-    results = concurrent_queries(domains, ip_address, max_workers, query_interval, num_queries)
-
-    st.write("查询完成。")
+# Only show the final counts after queries are completed
+if query_started and len(results) >= num_queries:
+    st.sidebar.text(f"Total Queries: {len(results)}")
+    st.sidebar.text(f"Timeouts: {timeout_count}")
+    query_started = False
