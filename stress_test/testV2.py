@@ -78,7 +78,7 @@ def start_queries(ip_address, query_interval, max_workers, num_queries):
     global stop_event, query_started
     stop_event.set()  # Stop any ongoing queries
     stop_event.clear()
-    domains = load_domains('data.txt')
+    domains = load_domains('domain.txt')
     query_started = True
     threading.Thread(target=concurrent_queries,
                      args=(domains, ip_address, max_workers, query_interval, num_queries)).start()
@@ -91,10 +91,10 @@ st.markdown("This program is used to test the effectiveness of DNS relay. For mo
 # Sidebar for inputs
 st.sidebar.title("Settings")
 ip_address = st.sidebar.text_input("DNS Relay IP Address", "172.200.1.50")
-query_interval = st.sidebar.number_input("Query Interval (seconds)", value=0.5, min_value=0.001, max_value=10.0, step=0.001)
+query_interval = st.sidebar.number_input("Query Interval (seconds)", value=0.5, min_value=0.01, max_value=10.0, step=0.01)
 max_workers = st.sidebar.number_input("Max Workers", value=1, min_value=1, max_value=10, step=1)
-num_queries = st.sidebar.number_input("Number of Queries", value=10, min_value=1, max_value=300000, step=1)
-timeout_duration = st.sidebar.number_input("Timeout Duration (seconds)", value=5.0, min_value=1.0, max_value=60.0, step=0.1)
+num_queries = st.sidebar.number_input("Number of Queries", value=10, min_value=1, max_value=3000, step=1)
+timeout_duration = st.sidebar.number_input("Timeout Duration (seconds)", value=5.0, min_value=1.0, max_value=60.0, step=0.01)
 start_button = st.sidebar.button("Start")
 
 # Main content area for the graph
