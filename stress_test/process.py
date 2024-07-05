@@ -1,16 +1,21 @@
-def copy_lines(input_file, output_file):
-    with open(input_file, 'r', encoding='utf-8') as infile:
-        with open(output_file, 'w', encoding='utf-8') as outfile:
-            lines = infile.readlines()
-            for line in lines[:300]:  # Read the first 100 lines
-                line = line.strip()  # Strip newline characters and spaces
-                for _ in range(10):  # Copy each line ten times
-                    outfile.write(line + '\n')
+import random
 
-    print(f"The first 300 lines have been copied and saved in {output_file}.")
+def expand_and_shuffle(input_file, output_file):
+    domains = []
+    with open(input_file, 'r') as f:
+        domains = f.read().splitlines()
 
-# Example usage
+    expanded_domains = []
+    for domain in domains:
+        expanded_domains.extend([domain] * 10)
+
+    random.shuffle(expanded_domains)
+
+    with open(output_file, 'w') as f:
+        for domain in expanded_domains:
+            f.write(domain + '\n')
+
 if __name__ == "__main__":
-    input_file = 'unique.txt'  # Replace with your input file name
-    output_file = 'domain.txt'  # Replace with your output file name
-    copy_lines(input_file, output_file)
+    input_file = 'domain.txt'
+    output_file = 'domain.txt'
+    expand_and_shuffle(input_file, output_file)
