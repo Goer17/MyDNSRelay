@@ -94,7 +94,7 @@ ip_address = st.sidebar.text_input("DNS Relay IP Address", "172.200.1.50")
 query_interval = st.sidebar.number_input("Query Interval (seconds)", value=0.5, min_value=0.01, max_value=10.0, step=0.01)
 max_workers = st.sidebar.number_input("Max Workers", value=1, min_value=1, max_value=10, step=1)
 num_queries = st.sidebar.number_input("Number of Queries", value=10, min_value=1, max_value=3000, step=1)
-timeout_duration = st.sidebar.number_input("Timeout Duration (seconds)", value=5.0, min_value=1.0, max_value=60.0, step=0.01)
+timeout_duration = st.sidebar.number_input("Timeout Duration (seconds)", value=5.0, min_value=0.01, max_value=60.0, step=0.01)
 start_button = st.sidebar.button("Start")
 
 # Main content area for the graph
