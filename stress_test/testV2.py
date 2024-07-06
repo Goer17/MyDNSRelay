@@ -85,7 +85,7 @@ st.markdown("This program is used to test the effectiveness of DNS relay. For mo
 
 # Sidebar for inputs
 st.sidebar.title("Settings")
-ip_address = st.sidebar.text_input("DNS Relay IP Address", "172.200.1.50")
+ip_address = st.sidebar.text_input("DNS Relay IP Address", "10.29.50.133")
 query_interval = st.sidebar.number_input("Query Interval (ms)", value=1.0, step=0.01)
 max_workers = st.sidebar.number_input("Max Workers", value=1, step=1)
 num_queries = st.sidebar.number_input("Number of Queries", value=1000, step=1)
