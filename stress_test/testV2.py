@@ -15,26 +15,23 @@ total_domains = 0
 timeout_count = 0
 stop_event = threading.Event()
 query_started = False
-timeout_duration = 5  # Default timeout duration in seconds
-
+timeout_duration = 5000  # Default timeout duration in milliseconds
 
 # Function to perform the nslookup query
 def query_domain(domain, ip_address, timeout):
     command = ['nslookup', domain, ip_address]
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=timeout)
+        result = subprocess.run(command, capture_output=True, text=True, check=True, timeout=timeout / 1000)
         return f"{domain}: {result.stdout}"
     except subprocess.CalledProcessError as e:
         return f"Error querying {domain}: {e}"
     except subprocess.TimeoutExpired:
         return f"Timeout querying {domain}"
 
-
 # Function to load domains from a file
 def load_domains(file_path):
     with open(file_path, 'r') as file:
         return [line.strip() for line in file if line.strip()]
-
 
 # Function to execute concurrent queries
 def concurrent_queries(domains, ip_address, max_workers, query_interval, num_queries=None):
@@ -63,7 +60,7 @@ def concurrent_queries(domains, ip_address, max_workers, query_interval, num_que
             except Exception as e:
                 results.append(f"Error querying {domain}: {e}")
             finally:
-                time.sleep(query_interval)
+                time.sleep(query_interval / 1000)
                 if "Timeout" in result:
                     timeout_count += 1
                 current_time = time.time() - start_time
@@ -72,7 +69,6 @@ def concurrent_queries(domains, ip_address, max_workers, query_interval, num_que
                 packet_rate_data.append(packet_rate)
                 timeout_rate_data.append(timeout_rate)
                 time_data.append(current_time)
-
 
 def start_queries(ip_address, query_interval, max_workers, num_queries):
     global stop_event, query_started
@@ -83,7 +79,6 @@ def start_queries(ip_address, query_interval, max_workers, num_queries):
     threading.Thread(target=concurrent_queries,
                      args=(domains, ip_address, max_workers, query_interval, num_queries)).start()
 
-
 # Streamlit app layout
 st.title("DNS Pressure Test")
 st.markdown("This program is used to test the effectiveness of DNS relay. For more details, please visit our [GitHub](https://github.com/Goer17/SimpleDNS/tree/main).")
@@ -91,10 +86,10 @@ st.markdown("This program is used to test the effectiveness of DNS relay. For mo
 # Sidebar for inputs
 st.sidebar.title("Settings")
 ip_address = st.sidebar.text_input("DNS Relay IP Address", "172.200.1.50")
-query_interval = st.sidebar.number_input("Query Interval (seconds)", value=0.5, min_value=0.01, max_value=10.0, step=0.01)
-max_workers = st.sidebar.number_input("Max Workers", value=1, min_value=1, max_value=10, step=1)
-num_queries = st.sidebar.number_input("Number of Queries", value=10, min_value=1, max_value=3000, step=1)
-timeout_duration = st.sidebar.number_input("Timeout Duration (seconds)", value=5.0, min_value=0.01, max_value=60.0, step=0.01)
+query_interval = st.sidebar.number_input("Query Interval (ms)", value=1.0, step=0.01)
+max_workers = st.sidebar.number_input("Max Workers", value=1, step=1)
+num_queries = st.sidebar.number_input("Number of Queries", value=1000, step=1)
+timeout_duration = st.sidebar.number_input("Timeout Duration (ms)", value=1.0, step=0.01)
 start_button = st.sidebar.button("Start")
 
 # Main content area for the graph
@@ -116,7 +111,7 @@ progress_bar = st.sidebar.progress(0)
 while query_started and len(results) < num_queries:
     if stop_event.is_set():
         break
-    time.sleep(0.25)  # Ensure updates every 1 second
+    time.sleep(0.25)  # Ensure updates every 0.25 seconds
     if len(time_data) > 0:
         progress = min(len(results) / num_queries, 1.0)
         progress_bar.progress(progress)
